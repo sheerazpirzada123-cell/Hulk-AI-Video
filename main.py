@@ -1,10 +1,9 @@
+import os
 import asyncio
 import edge_tts
 import requests
-import os
 import google.generativeai as genai
-from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
-from moviepy.editor import *
+from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
 
 # --- SETUP ---
 # GitHub Secrets se API Key uthane ke liye
