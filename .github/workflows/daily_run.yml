@@ -1,6 +1,6 @@
-name: Automatic Hulk Bot
+name: Pakistani Hulk Bot ElevenLabs
 on:
-  workflow_dispatch: # Sirf button dabane par chalega
+  workflow_dispatch:
 
 jobs:
   build:
@@ -11,16 +11,18 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Tools
+      - name: Install All Tools
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg
-          pip install edge-tts requests moviepy==1.0.3 Pillow imageio[pyav] imageio-ffmpeg
+          pip install requests moviepy==1.0.3 Pillow imageio[pyav] imageio-ffmpeg
 
-      - name: Run Automation
+      - name: Run Bot
+        env:
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
         run: python main.py
 
-      - name: Download Video Here
+      - name: Upload Result
         uses: actions/upload-artifact@v4
         with:
-          name: Hulk-Bot-Video
-          path: hulk_pakistani_ammi.mp4
+          name: Hulk-Pakistani-Video
+          path: hulk_bot_final.mp4
