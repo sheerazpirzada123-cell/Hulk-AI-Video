@@ -1,8 +1,8 @@
 name: Daily AI Video
 on:
   schedule:
-    - cron: '0 0 * * *' # Har raat 12 baje khud chalega
-  workflow_dispatch: # Manual button ke liye
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -21,8 +21,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
           pip install --upgrade pip
-          pip install google-generativeai edge-tts requests
-          pip install moviepy==1.0.3  # Ye version error solve karega
+          pip install google-generativeai edge-tts requests moviepy==1.0.3
 
       - name: Run AI Script
         env:
