@@ -6,21 +6,20 @@ import google.generativeai as genai
 from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
 
 # --- SETUP ---
-# GitHub Secrets se key uthayega (Jo aapne Settings mein daali hai)
 GEMINI_KEY = os.getenv("GEMINI_API_KEY") 
 genai.configure(api_key=GEMINI_KEY)
 
-# Latest Model: Gemini 1.5 Flash (404 error nahi aayega)
-model = genai.GenerativeModel('gemini-1.5-flash')
+# Aapki demand par Latest Experimental Model (v2)
+# Note: Agar 404 aaye toh ise 'gemini-1.5-flash' kar dena
+model = genai.GenerativeModel('gemini-2.0-flash-exp')
 
 async def generate_audio(text):
     communicate = edge_tts.Communicate(text, "hi-IN-MadhurNeural")
     await communicate.save("voiceover.mp3")
 
 def get_ai_content():
-    # 90 second ki lambi script ke liye prompt
     prompt = """Write a funny 90-second Hindi story about Hulk and his Indian Mom. 
-    The story must be very long (approx 400 words).
+    The story must be very long (around 400 words).
     Format exactly like this:
     STORY: [Hindi story text]
     SCENES: [12 English image prompts separated by commas]"""
@@ -33,7 +32,7 @@ def get_ai_content():
         prompts = text.split("SCENES:")[1].strip().split(",")
         return story, prompts
     except:
-        return "Hulk ki mummy ne use belan se mara.", ["angry indian mom", "hulk crying"]
+        return "Hulk ko mummy ne belan se mara.", ["angry indian mom", "hulk crying"]
 
 def download_images(prompts):
     img_list = []
@@ -56,13 +55,13 @@ def create_video(images, audio_file):
 
 async def start_process():
     try:
-        print("🤖 Gemini 1.5 Flash is writing...")
+        print("🚀 Gemini 2.0-Exp model se story generate ho rahi hai...")
         story, prompts = get_ai_content()
-        print("🎙️ Creating Voice...")
+        print("🎙️ Awaaz taiyar ho rahi hai...")
         await generate_audio(story)
-        print("🖼️ Downloading Images...")
+        print("🖼️ Images aa rahi hain...")
         imgs = download_images(prompts)
-        print("🎬 Editing Final Video...")
+        print("🎬 Final editing start...")
         create_video(imgs, "voiceover.mp3")
         print("✅ SUCCESS!")
     except Exception as e:
