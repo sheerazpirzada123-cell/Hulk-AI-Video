@@ -2,7 +2,7 @@ name: Daily AI Video
 on:
   schedule:
     - cron: '0 0 * * *' # Har raat 12 baje
-  workflow_dispatch: # Manual button ke liye
+  workflow_dispatch: # Manual button
 
 jobs:
   build:
@@ -16,23 +16,20 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install System Tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
       - name: Install Libraries
         run: |
           pip install --upgrade pip
-          pip install google-generativeai edge-tts requests
-          pip install moviepy==1.0.3 decorator==4.4.2
+          pip install google-generativeai edge-tts requests moviepy==1.0.3 decorator==4.4.2
 
-      - name: Run AI Script
+      - name: Run Script
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python main.py
 
-      - name: Save Video Artifact
+      - name: Save Video
         uses: actions/upload-artifact@v4
         with:
           name: Daily-Hulk-Video
