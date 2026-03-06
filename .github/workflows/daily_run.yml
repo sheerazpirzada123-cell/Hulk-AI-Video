@@ -1,8 +1,8 @@
 name: Daily AI Video
 on:
   schedule:
-    - cron: '0 0 * * *'
-  workflow_dispatch:
+    - cron: '0 0 * * *' # Har raat 12 baje
+  workflow_dispatch: # Manual button ke liye
 
 jobs:
   build:
@@ -16,12 +16,16 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Tools
+      - name: Install System Tools
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
+
+      - name: Install Libraries
+        run: |
           pip install --upgrade pip
-          pip install google-generativeai edge-tts requests moviepy==1.0.3
+          pip install google-generativeai edge-tts requests
+          pip install moviepy==1.0.3 decorator==4.4.2
 
       - name: Run AI Script
         env:
