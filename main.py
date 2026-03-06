@@ -5,11 +5,12 @@ import requests
 import google.generativeai as genai
 from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
 
-# --- LATEST GEMINI SETUP ---
+# --- GEMINI v1beta SETUP ---
 GEMINI_KEY = os.getenv("GEMINI_API_KEY") 
 genai.configure(api_key=GEMINI_KEY)
 
-# Gemini 1.5 Flash use kar rahe hain jo v1beta se zyada stable hai
+# Gemini 1.5 Flash (v1beta version)
+# Ye model abhi sabse stable hai automation ke liye
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 async def generate_audio(text):
@@ -17,12 +18,14 @@ async def generate_audio(text):
     await communicate.save("voiceover.mp3")
 
 def get_ai_content():
+    # Long script prompt for 90 seconds video
     prompt = """Write a funny 90-second Hindi story about Hulk and his Indian Mom. 
-    Format your response EXACTLY like this:
-    STORY: [Write a long Hindi story here]
-    SCENES: [Write 12 English image prompts separated by commas]"""
+    The story must be very detailed (350-400 words).
+    Format exactly like this:
+    STORY: [Hindi text]
+    SCENES: [12 English image prompts separated by commas]"""
     
-    # Latest generation method
+    # Model generation call
     response = model.generate_content(prompt)
     text = response.text
     
@@ -31,11 +34,12 @@ def get_ai_content():
         prompts = text.split("SCENES:")[1].strip().split(",")
         return story, prompts
     except:
-        return "Hulk ki mummy ne use belan se mara kyunki wo kaam nahi kar raha tha.", ["angry indian mom with rolling pin", "funny hulk crying"]
+        return "Hulk ki mummy ne use belan se mara.", ["angry indian mom", "hulk crying"]
 
 def download_images(prompts):
     img_list = []
     for i, p in enumerate(prompts[:12]):
+        # Pollinations AI use kar rahe hain (Free & Fast)
         url = f"https://image.pollinations.ai/prompt/{p.strip().replace(' ', '%20')}?width=1080&height=1920&nologo=true"
         r = requests.get(url)
         name = f"step_{i}.jpg"
@@ -50,21 +54,22 @@ def create_video(images, audio_file):
     clips = [ImageClip(img).set_duration(duration_per_img).crossfadein(0.5) for img in images]
     final = concatenate_videoclips(clips, method="compose")
     final = final.set_audio(audio)
+    # Output file
     final.write_videofile("hulk_funny_final.mp4", fps=24, codec="libx264")
 
 async def start_process():
     try:
-        print("🤖 Gemini 1.5 Flash story likh raha hai...")
+        print("🤖 Gemini v1beta (1.5 Flash) is generating story...")
         story, prompts = get_ai_content()
-        print("🎙️ Awaaz taiyar ho rahi hai...")
+        print("🎙️ Creating Voiceover...")
         await generate_audio(story)
-        print("🖼️ Images download ho rahi hain...")
+        print("🖼️ Downloading Images...")
         imgs = download_images(prompts)
-        print("🎬 Final video edit ho rahi hai...")
+        print("🎬 Final Video Editing...")
         create_video(imgs, "voiceover.mp3")
-        print("✅ MUBARAK HO! Video ban gayi.")
+        print("✅ DONE! Video is ready.")
     except Exception as e:
-        print(f"❌ Error aaya: {e}")
+        print(f"❌ Error occurred: {e}")
 
 if __name__ == "__main__":
     asyncio.run(start_process())
