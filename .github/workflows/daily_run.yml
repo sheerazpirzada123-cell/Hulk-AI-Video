@@ -19,9 +19,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
           pip install --upgrade pip
-          pip install edge-tts requests moviepy==1.0.3 decorator==4.4.2
+          pip install google-generativeai edge-tts requests moviepy==1.0.3 decorator==4.4.2 Pillow
 
-      - name: Run Free AI Script
+      - name: Run Script
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python main.py
 
       - name: Save Video
