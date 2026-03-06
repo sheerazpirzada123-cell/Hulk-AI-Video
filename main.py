@@ -2,41 +2,38 @@ import os
 import asyncio
 import edge_tts
 import requests
-import google.generativeai as genai
 from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
 
-# --- SETUP ---
-# GitHub Secrets se key uthayega
-GEMINI_KEY = os.getenv("GEMINI_API_KEY") 
-genai.configure(api_key=GEMINI_KEY)
-
-# Gemini 1.5 Flash Model (Official Name for v1beta)
-model = genai.GenerativeModel('gemini-1.5-flash')
+# --- 100% FREE AI SETUP (No API Key Needed) ---
+def get_free_ai_content():
+    # Hum Pollinations AI use kar rahe hain text ke liye
+    prompt = "Write a funny 90-second Hindi story about Hulk and his Indian Mom. Format: STORY: [hindi text] SCENES: [12 English image prompts separated by commas]"
+    url = f"https://text.pollinations.ai/{prompt.replace(' ', '%20')}"
+    
+    response = requests.get(url)
+    text = response.text
+    
+    try:
+        # Text ko split karna
+        if "STORY:" in text and "SCENES:" in text:
+            story = text.split("STORY:")[1].split("SCENES:")[0].strip()
+            prompts = text.split("SCENES:")[1].strip().split(",")
+        else:
+            # Fallback agar AI format follow na kare
+            story = "Hulk ki mummy ne use belan se mara kyunki wo kamra saaf nahi kar raha tha."
+            prompts = ["angry indian mom", "hulk crying", "funny indian house"]
+        return story, prompts
+    except:
+        return "Hulk aur uski mummy ki ladayi.", ["hulk", "mom"]
 
 async def generate_audio(text):
     communicate = edge_tts.Communicate(text, "hi-IN-MadhurNeural")
     await communicate.save("voiceover.mp3")
 
-def get_ai_content():
-    prompt = """Write a funny 90-second Hindi story about Hulk and his Indian Mom. 
-    The story must be long (approx 400 words).
-    Format exactly like this:
-    STORY: [Hindi Story Text]
-    SCENES: [12 English Image Prompts separated by commas]"""
-    
-    response = model.generate_content(prompt)
-    text = response.text
-    
-    try:
-        story = text.split("STORY:")[1].split("SCENES:")[0].strip()
-        prompts = text.split("SCENES:")[1].strip().split(",")
-        return story, prompts
-    except:
-        return "Hulk ki mummy ne use belan se mara.", ["angry indian mom", "hulk crying"]
-
 def download_images(prompts):
     img_list = []
     for i, p in enumerate(prompts[:12]):
+        # Pollinations AI for Images
         url = f"https://image.pollinations.ai/prompt/{p.strip().replace(' ', '%20')}?width=1080&height=1920&nologo=true"
         r = requests.get(url)
         name = f"step_{i}.jpg"
@@ -55,17 +52,17 @@ def create_video(images, audio_file):
 
 async def start_process():
     try:
-        print("🤖 Gemini 1.5 Flash story likh raha hai...")
-        story, prompts = get_ai_content()
+        print("🤖 Free AI Story likh raha hai...")
+        story, prompts = get_free_ai_content()
         print("🎙️ Awaaz ban rahi hai...")
         await generate_audio(story)
-        print("🖼️ Images aa rahi hain...")
+        print("🖼️ Images download ho rahi hain...")
         imgs = download_images(prompts)
         print("🎬 Video edit ho rahi hai...")
         create_video(imgs, "voiceover.mp3")
-        print("✅ SUCCESS!")
+        print("✅ SUCCESS! Video Ready.")
     except Exception as e:
-        print(f"❌ Error aaya: {e}")
+        print(f"❌ Error: {e}")
 
 if __name__ == "__main__":
     asyncio.run(start_process())
