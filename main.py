@@ -6,12 +6,12 @@ import google.generativeai as genai
 from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
 
 # --- SETUP ---
+# GitHub Secrets se key uthayega
 GEMINI_KEY = os.getenv("GEMINI_API_KEY") 
 genai.configure(api_key=GEMINI_KEY)
 
-# Aapki demand par Latest Experimental Model (v2)
-# Note: Agar 404 aaye toh ise 'gemini-1.5-flash' kar dena
-model = genai.GenerativeModel('gemini-2.0-flash-exp')
+# Gemini 1.5 Flash Model (Official Name for v1beta)
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 async def generate_audio(text):
     communicate = edge_tts.Communicate(text, "hi-IN-MadhurNeural")
@@ -19,10 +19,10 @@ async def generate_audio(text):
 
 def get_ai_content():
     prompt = """Write a funny 90-second Hindi story about Hulk and his Indian Mom. 
-    The story must be very long (around 400 words).
+    The story must be long (approx 400 words).
     Format exactly like this:
-    STORY: [Hindi story text]
-    SCENES: [12 English image prompts separated by commas]"""
+    STORY: [Hindi Story Text]
+    SCENES: [12 English Image Prompts separated by commas]"""
     
     response = model.generate_content(prompt)
     text = response.text
@@ -32,7 +32,7 @@ def get_ai_content():
         prompts = text.split("SCENES:")[1].strip().split(",")
         return story, prompts
     except:
-        return "Hulk ko mummy ne belan se mara.", ["angry indian mom", "hulk crying"]
+        return "Hulk ki mummy ne use belan se mara.", ["angry indian mom", "hulk crying"]
 
 def download_images(prompts):
     img_list = []
@@ -55,17 +55,17 @@ def create_video(images, audio_file):
 
 async def start_process():
     try:
-        print("🚀 Gemini 2.0-Exp model se story generate ho rahi hai...")
+        print("🤖 Gemini 1.5 Flash story likh raha hai...")
         story, prompts = get_ai_content()
-        print("🎙️ Awaaz taiyar ho rahi hai...")
+        print("🎙️ Awaaz ban rahi hai...")
         await generate_audio(story)
         print("🖼️ Images aa rahi hain...")
         imgs = download_images(prompts)
-        print("🎬 Final editing start...")
+        print("🎬 Video edit ho rahi hai...")
         create_video(imgs, "voiceover.mp3")
         print("✅ SUCCESS!")
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Error aaya: {e}")
 
 if __name__ == "__main__":
     asyncio.run(start_process())
