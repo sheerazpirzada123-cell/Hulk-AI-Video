@@ -1,57 +1,127 @@
+"""
+Hulk AI Video Generator (single-file version)
+
+What it does:
+1) Uses Gemini to generate a Hindi story + 12 scene prompts (English)
+2) Uses edge-tts to generate voiceover MP3 for the story
+3) Downloads 12 images from pollinations.ai using the prompts
+4) Builds a vertical video (1080x1920) with crossfades, synced to audio
+
+Requirements:
+  pip install google-generativeai edge-tts moviepy requests
+
+System dependency:
+  ffmpeg must be installed and available on PATH
+
+Environment:
+  GEMINI_API_KEY must be set
+Optional:
+  GEMINI_MODEL (default: gemini-1.5-flash)
+"""
+
+from __future__ import annotations
+
 import os
+import re
+import json
+import shutil
 import asyncio
-import edge_tts
+from pathlib import Path
+from urllib.parse import quote
+
 import requests
+import edge_tts
 import google.generativeai as genai
 
-# MoviePy imports ko handle karne ka naya tarika
+# MoviePy imports (compatible with common installs)
 try:
     from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
-except ImportError:
-    from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
-    from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
+except ImportError as e:
+    raise ImportError(
+        "moviepy import failed. Install with: pip install moviepy"
+    ) from e
 
-# --- SETUP ---
-GEMINI_KEY = os.getenv("GEMINI_API_KEY") 
-genai.configure(api_key=GEMINI_KEY)
-model = genai.GenerativeModel('gemini-pro')
 
-async def generate_audio(text):
-    communicate = edge_tts.Communicate(text, "hi-IN-MadhurNeural")
-    await communicate.save("voiceover.mp3")
+# ----------------------------
+# Configuration
+# ----------------------------
+OUTPUT_DIR = Path("out")
+OUTPUT_DIR.mkdir(exist_ok=True)
 
-def get_ai_content():
-    prompt = "Write a funny 90-second Hindi story about Hulk and his Indian Mom. Format: STORY: [text] SCENES: [12 English prompts separated by commas]"
-    response = model.generate_content(prompt)
-    text = response.text
-    story = text.split("STORY:")[1].split("SCENES:")[0].strip()
-    prompts = text.split("SCENES:")[1].strip().split(",")
-    return story, prompts
+VOICE_NAME = os.getenv("EDGE_TTS_VOICE", "hi-IN-MadhurNeural")
+GEMINI_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
 
-def download_images(prompts):
-    img_list = []
-    for i, p in enumerate(prompts[:12]):
-        url = f"https://image.pollinations.ai/prompt/{p.strip().replace(' ', '%20')}?width=1080&height=1920&nologo=true"
-        r = requests.get(url)
-        name = f"step_{i}.jpg"
-        with open(name, "wb") as f:
-            f.write(r.content)
-        img_list.append(name)
-    return img_list
+IMAGE_W = int(os.getenv("IMAGE_W", "1080"))
+IMAGE_H = int(os.getenv("IMAGE_H", "1920"))
+NUM_SCENES = int(os.getenv("NUM_SCENES", "12"))
 
-def create_video(images, audio_file):
-    audio = AudioFileClip(audio_file)
-    duration_per_img = audio.duration / len(images)
-    clips = [ImageClip(img).set_duration(duration_per_img).crossfadein(0.5) for img in images]
-    final = concatenate_videoclips(clips, method="compose")
-    final = final.set_audio(audio)
-    final.write_videofile("hulk_funny_final.mp4", fps=24, codec="libx264")
+# Crossfade duration between images (seconds)
+FADE_SEC = float(os.getenv("FADE_SEC", "0.5"))
 
-async def start_process():
-    story, prompts = get_ai_content()
-    await generate_audio(story)
-    imgs = download_images(prompts)
-    create_video(imgs, "voiceover.mp3")
+# Timeouts
+IMAGE_TIMEOUT_SEC = float(os.getenv("IMAGE_TIMEOUT_SEC", "60"))
+GEMINI_TIMEOUT_NOTE = "Gemini timeout handling depends on upstream; retry manually if needed."
 
-if __name__ == "__main__":
-    asyncio.run(start_process())
+
+# ----------------------------
+# Utilities / Validation
+# ----------------------------
+def require_env():
+    if not GEMINI_KEY:
+        raise RuntimeError("GEMINI_API_KEY is not set (export/set it and rerun).")
+
+
+def require_ffmpeg():
+    if shutil.which("ffmpeg") is None:
+        raise RuntimeError(
+            "ffmpeg not found on PATH. Install ffmpeg and make sure it's available in your terminal."
+        )
+
+
+def safe_write_bytes(path: Path, data: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+
+
+# ----------------------------
+# Gemini content generation
+# ----------------------------
+def build_prompt() -> str:
+    # Stronger instructions + strict format to reduce parsing failures
+    return f"""
+You are writing content for a short vertical video.
+
+Return ONLY in the following format (no extra text, no markdown):
+
+STORY:
+<Hindi story, funny, about 90 seconds when read aloud>
+
+SCENES:
+<Exactly {NUM_SCENES} English image prompts, separated by commas. Each prompt should be vivid, cinematic, and safe-for-work.>
+
+Topic: Hulk and his Indian Mom.
+""".strip()
+
+
+def parse_gemini_output(text: str) -> tuple[str, list[str]]:
+    """
+    Parses:
+      STORY:
+      ...
+      SCENES:
+      prompt1, prompt2, ...
+    """
+    if not text or "STORY" not in text or "SCENES" not in text:
+        raise RuntimeError(f"Unexpected Gemini output (missing markers):\n{text}")
+
+    # Regex to be more resilient to spacing/newlines
+    m = re.search(r"STORY\s*:\s*(.*?)\s*SCENES\s*:\s*(.*)$", text, flags=re.S | re.I)
+    if not m:
+        raise RuntimeError(f"Could not parse Gemini output:\n{text}")
+
+    story = m.group(1).strip()
+    scenes_raw = m.group(2).strip()
+
+    prompts = [p.strip() for p in scenes_raw.split(",") if p.strip()]
+    if len(prompts) < NUM
