@@ -1,69 +1,58 @@
-import os
-import asyncio
-import edge_tts
-import requests
-import random
+import os, asyncio, edge_tts, requests, time
+from PIL import Image
 from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
 
-def get_free_story():
-    # Pollinations AI for story text (No API Key)
-    prompt = "Write a funny 60-second Hindi story about Hulk and his Indian Mom. Format: STORY: [hindi text] KEYWORDS: [5 simple English nouns separated by commas]"
+# 1. Automatic Content Generation (Pakistani Theme)
+def get_bot_content():
+    prompt = "Write a 50-second funny Urdu/Hindi story about Hulk and his Pakistani Ammi. Format: STORY: [urdu text] SCENES: [6 short English image keywords]"
     url = f"https://text.pollinations.ai/{prompt.replace(' ', '%20')}"
     try:
         r = requests.get(url, timeout=30)
-        text = r.text
-        story = text.split("STORY:")[1].split("KEYWORDS:")[0].strip()
-        keywords = text.split("KEYWORDS:")[1].strip().split(",")
-        return story, [k.strip() for k in keywords]
+        story = r.text.split("STORY:")[1].split("SCENES:")[0].strip()
+        scenes = r.text.split("SCENES:")[1].strip().split(",")
+        return story, [s.strip() for s in scenes]
     except:
-        return "Hulk ki mummy ne use belan se mara.", ["hulk", "angry", "mom", "kitchen", "india"]
+        return "Hulk ki Ammi ne use chappal dikhayi.", ["angry pakistani mother", "hulk scared"]
 
-async def generate_audio(text):
+# 2. Automatic Voiceover
+async def make_voice(text):
+    # MadhurNeural works great for Urdu/Hindi
     communicate = edge_tts.Communicate(text, "hi-IN-MadhurNeural")
-    await communicate.save("voiceover.mp3")
+    await communicate.save("voice.mp3")
 
+# 3. Automatic Image Generation & Validation
 def download_images(keywords):
-    img_list = []
-    # Keyword based images (Unsplash is very stable for downloads)
-    for i, word in enumerate(keywords[:5]):
-        url = f"https://source.unsplash.com/featured/1080x1920?{word.replace(' ', '')}"
+    valid_paths = []
+    for i, k in enumerate(keywords[:6]):
+        # Pakistani context added to prompts automatically
+        full_prompt = f"3D Disney style Hulk with a Pakistani mother in traditional dress, {k}"
+        url = f"https://image.pollinations.ai/prompt/{full_prompt.replace(' ', '%20')}?width=720&height=1280&seed={int(time.time())+i}&nologo=true"
         try:
-            r = requests.get(url, timeout=20, allow_redirects=True)
-            if r.status_code == 200:
-                name = f"image_{i}.jpg"
-                with open(name, "wb") as f:
-                    f.write(r.content)
-                img_list.append(name)
-                print(f"✅ Downloaded image for: {word}")
-        except:
-            print(f"❌ Failed to download: {word}")
-    return img_list
+            res = requests.get(url, timeout=20)
+            raw = f"raw_{i}.jpg"
+            with open(raw, "wb") as f: f.write(res.content)
+            # Fixes the 'avcodec_send_packet' error from your screenshot
+            with Image.open(raw) as img:
+                img.convert("RGB").save(f"final_{i}.jpg", "JPEG")
+                valid_paths.append(f"final_{i}.jpg")
+        except: continue
+    return valid_paths
 
-def create_video(images, audio_file):
-    if not images:
-        raise Exception("Koi image download nahi hui!")
-    
-    audio = AudioFileClip(audio_file)
-    # 5 images ko total audio length par divide karna
-    duration_per_img = audio.duration / len(images)
-    
-    clips = [ImageClip(m).set_duration(duration_per_img).set_fps(24) for m in images]
-    final = concatenate_videoclips(clips, method="compose").set_audio(audio)
-    final.write_videofile("hulk_funny_final.mp4", fps=24, codec="libx264")
+# 4. Final Video Stitching
+def create_bot_video(images, audio):
+    aud = AudioFileClip(audio)
+    duration = aud.duration / len(images)
+    clips = [ImageClip(m).set_duration(duration).set_fps(24) for m in images]
+    final = concatenate_videoclips(clips, method="compose").set_audio(aud)
+    final.write_videofile("hulk_pakistani_ammi.mp4", fps=24, codec="libx264", audio_codec="aac")
 
-async def start_process():
-    try:
-        print("📝 Story generation...")
-        story, keywords = get_free_story()
-        print("🎙️ Audio generation...")
-        await generate_audio(story)
-        print("🖼️ Image downloading...")
-        imgs = download_images(keywords)
-        print("🎬 Video stitching...")
-        create_video(imgs, "voiceover.mp3")
-        print("✅ SUCCESS!")
-    except Exception as e:
-        print(f"❌ Final Error: {e}")
+async def start_bot():
+    print("🤖 Bot is starting automation...")
+    story, scenes = get_bot_content()
+    await make_voice(story)
+    imgs = download_images(scenes)
+    create_bot_video(imgs, "voice.mp3")
+    print("✅ Video Generated Successfully!")
 
 if __name__ == "__main__":
-    asyncio.run(start_process())
+    asyncio.run(start_bot())
