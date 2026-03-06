@@ -2,48 +2,41 @@ import os
 import asyncio
 import edge_tts
 import requests
-import time
-from PIL import Image
+import random
 from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
 
-def get_free_content():
-    # Story generate karne ke liye reliable prompt
-    prompt = "Write a funny short 60-second Hindi story about Hulk and his Indian Mom. Format: STORY: [hindi text] SCENES: [8 English image prompts separated by commas]"
+def get_free_story():
+    # Pollinations AI for story text (No API Key)
+    prompt = "Write a funny 60-second Hindi story about Hulk and his Indian Mom. Format: STORY: [hindi text] KEYWORDS: [5 simple English nouns separated by commas]"
     url = f"https://text.pollinations.ai/{prompt.replace(' ', '%20')}"
     try:
-        response = requests.get(url, timeout=30)
-        text = response.text
-        story = text.split("STORY:")[1].split("SCENES:")[0].strip()
-        prompts = text.split("SCENES:")[1].strip().split(",")
-        return story, [p.strip() for p in prompts if len(p) > 5]
+        r = requests.get(url, timeout=30)
+        text = r.text
+        story = text.split("STORY:")[1].split("KEYWORDS:")[0].strip()
+        keywords = text.split("KEYWORDS:")[1].strip().split(",")
+        return story, [k.strip() for k in keywords]
     except:
-        return "Hulk ki mummy ne use belan mara.", ["angry indian mom", "hulk crying"]
+        return "Hulk ki mummy ne use belan se mara.", ["hulk", "angry", "mom", "kitchen", "india"]
 
 async def generate_audio(text):
     communicate = edge_tts.Communicate(text, "hi-IN-MadhurNeural")
     await communicate.save("voiceover.mp3")
 
-def download_and_fix_images(prompts):
+def download_images(keywords):
     img_list = []
-    for i, p in enumerate(prompts[:8]):
-        # Seed change karne se har baar nayi image milti hai
-        seed = int(time.time()) + i
-        url = f"https://image.pollinations.ai/prompt/{p.replace(' ', '%20')}?width=1024&height=1024&seed={seed}&nologo=true"
-        
+    # Keyword based images (Unsplash is very stable for downloads)
+    for i, word in enumerate(keywords[:5]):
+        url = f"https://source.unsplash.com/featured/1080x1920?{word.replace(' ', '')}"
         try:
-            r = requests.get(url, timeout=20)
+            r = requests.get(url, timeout=20, allow_redirects=True)
             if r.status_code == 200:
-                with open(f"raw_{i}.jpg", "wb") as f:
+                name = f"image_{i}.jpg"
+                with open(name, "wb") as f:
                     f.write(r.content)
-                
-                # Image check aur conversion
-                with Image.open(f"raw_{i}.jpg") as img:
-                    img.convert('RGB').save(f"fixed_{i}.jpg", "JPEG")
-                    img_list.append(f"fixed_{i}.jpg")
-                    print(f"✅ Image {i} ready")
-        except Exception as e:
-            print(f"⚠️ Skip image {i}: {e}")
-            
+                img_list.append(name)
+                print(f"✅ Downloaded image for: {word}")
+        except:
+            print(f"❌ Failed to download: {word}")
     return img_list
 
 def create_video(images, audio_file):
@@ -51,22 +44,24 @@ def create_video(images, audio_file):
         raise Exception("Koi image download nahi hui!")
     
     audio = AudioFileClip(audio_file)
+    # 5 images ko total audio length par divide karna
     duration_per_img = audio.duration / len(images)
-    clips = [ImageClip(img).set_duration(duration_per_img) for img in images]
+    
+    clips = [ImageClip(m).set_duration(duration_per_img).set_fps(24) for m in images]
     final = concatenate_videoclips(clips, method="compose").set_audio(audio)
-    final.write_videofile("hulk_funny_final.mp4", fps=24, codec="libx264", audio_codec="aac")
+    final.write_videofile("hulk_funny_final.mp4", fps=24, codec="libx264")
 
 async def start_process():
     try:
-        print("🤖 Story generation...")
-        story, prompts = get_free_content()
+        print("📝 Story generation...")
+        story, keywords = get_free_story()
         print("🎙️ Audio generation...")
         await generate_audio(story)
-        print("🖼️ Image processing...")
-        imgs = download_and_fix_images(prompts)
-        print("🎬 Final video stitching...")
+        print("🖼️ Image downloading...")
+        imgs = download_images(keywords)
+        print("🎬 Video stitching...")
         create_video(imgs, "voiceover.mp3")
-        print("✅ MUBARAK HO! Video ban gayi.")
+        print("✅ SUCCESS!")
     except Exception as e:
         print(f"❌ Final Error: {e}")
 
