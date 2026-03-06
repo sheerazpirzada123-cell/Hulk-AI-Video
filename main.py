@@ -4,10 +4,12 @@ from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
 
 # --- SETTINGS ---
 ELEVENLABS_KEY = os.getenv("ELEVENLABS_API_KEY")
-VOICE_ID = "pNInz6obpg8n9S4a738h" # Yeh ek achhi Urdu/Hindi voice ID hai
+# 'Josh' voice ID jo har account mein by default hoti hai
+VOICE_ID = "TxGEqnSAs9dnFT47v3tM" 
 
 def get_bot_content():
-    prompt = "Write a 50-second funny Urdu story about Hulk and his Pakistani Ammi. Format: STORY: [urdu text] SCENES: [6 short English image keywords]"
+    # Prompt ko thoda aur simple kiya taaki Urdu clear aaye
+    prompt = "Write a 40-second very funny Urdu story about Hulk and his Pakistani Ammi. Hulk is scared of Ammi's chappal. Format: STORY: [urdu text] SCENES: [5 short English image keywords]"
     url = f"https://text.pollinations.ai/{prompt.replace(' ', '%20')}"
     try:
         r = requests.get(url, timeout=30)
@@ -20,12 +22,17 @@ def get_bot_content():
 def make_elevenlabs_audio(text):
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}"
     headers = {"xi-api-key": ELEVENLABS_KEY, "Content-Type": "application/json"}
-    data = {"text": text, "model_id": "eleven_multilingual_v2"}
+    # multilingual_v2 Urdu/Hindi ke liye best hai
+    data = {
+        "text": text, 
+        "model_id": "eleven_multilingual_v2",
+        "voice_settings": {"stability": 0.5, "similarity_boost": 0.5}
+    }
     
     response = requests.post(url, json=data, headers=headers)
     if response.status_code == 200:
-        with open("voice.mp3", "wb") as f:
-            f.write(response.content)
+        with os.open("voice.mp3", os.O_CREAT | os.O_WRONLY) as f:
+            os.write(f, response.content)
         return True
     else:
         print(f"ElevenLabs Error: {response.text}")
@@ -33,8 +40,9 @@ def make_elevenlabs_audio(text):
 
 def download_images(keywords):
     valid_paths = []
-    for i, k in enumerate(keywords[:6]):
-        full_p = f"3D Disney style Hulk with a Pakistani mother, {k}"
+    for i, k in enumerate(keywords[:5]):
+        # Pakistani context for DALL-E style images
+        full_p = f"3D Disney style Hulk with a Pakistani mother in a traditional house, {k}"
         url = f"https://image.pollinations.ai/prompt/{full_p.replace(' ', '%20')}?width=720&height=1280&seed={int(time.time())+i}"
         try:
             res = requests.get(url, timeout=20)
@@ -51,11 +59,15 @@ def create_video(images, audio):
     final.write_videofile("hulk_bot_final.mp4", fps=24, codec="libx264")
 
 async def start_bot():
+    print("🤖 Bot is starting...")
     story, scenes = get_bot_content()
+    print("🎙️ Generating Voiceover...")
     if make_elevenlabs_audio(story):
+        print("🖼️ Downloading Images...")
         imgs = download_images(scenes)
+        print("🎬 Stitching Video...")
         create_video(imgs, "voice.mp3")
-        print("✅ Success!")
+        print("✅ SUCCESS!")
 
 if __name__ == "__main__":
     asyncio.run(start_bot())
