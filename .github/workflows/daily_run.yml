@@ -18,9 +18,10 @@ jobs:
         python-version: '3.10'
 
     - name: Install Dependencies
+        # imageio-ffmpeg backend missing wala error fix
       run: |
         sudo apt-get update && sudo apt-get install -y ffmpeg
-        pip install requests moviepy==1.0.3 Pillow python-dotenv imageio-ffmpeg
+        pip install requests moviepy==1.0.3 Pillow imageio-ffmpeg
 
     - name: Run Script
       env:
@@ -28,7 +29,7 @@ jobs:
       run: python main.py
 
     - name: Upload Video Artifact
-      uses: actions/upload-artifact@v4 # FIXED: v3 se v4 kar diya
+      uses: actions/upload-artifact@v4 # FIXED: Updated to v4
       with:
         name: hulk-video
         path: hulk_bot_final.mp4
