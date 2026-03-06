@@ -19,10 +19,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
           pip install --upgrade pip
-          # In libraries se image reading ka error khatam ho jayega
-          pip install edge-tts requests moviepy==1.0.3 decorator==4.4.2 Pillow imageio[pyav] imageio[ffmpeg]
+          pip install edge-tts requests moviepy==1.0.3 decorator==4.4.2 Pillow imageio[pyav]
 
-      - name: Run Free AI Script
+      - name: Run Script
         run: python main.py
 
       - name: Save Video
