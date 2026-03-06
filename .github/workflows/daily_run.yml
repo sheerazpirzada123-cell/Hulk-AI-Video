@@ -19,7 +19,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
           pip install --upgrade pip
-          pip install edge-tts requests moviepy==1.0.3 decorator==4.4.2 Pillow
+          # In libraries se image reading ka error khatam ho jayega
+          pip install edge-tts requests moviepy==1.0.3 decorator==4.4.2 Pillow imageio[pyav] imageio[ffmpeg]
 
       - name: Run Free AI Script
         run: python main.py
