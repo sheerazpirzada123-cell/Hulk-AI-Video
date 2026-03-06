@@ -1,31 +1,26 @@
-name: Daily AI Video
+name: Automatic Hulk Bot
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Sirf button dabane par chalega
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
       - name: Install Tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
-          pip install --upgrade pip
-          pip install edge-tts requests moviepy==1.0.3 decorator==4.4.2 Pillow imageio[pyav]
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          pip install edge-tts requests moviepy==1.0.3 Pillow imageio[pyav] imageio-ffmpeg
 
-      - name: Run Script
+      - name: Run Automation
         run: python main.py
 
-      - name: Save Video
+      - name: Download Video Here
         uses: actions/upload-artifact@v4
         with:
-          name: Daily-Hulk-Video
-          path: hulk_funny_final.mp4
+          name: Hulk-Bot-Video
+          path: hulk_pakistani_ammi.mp4
