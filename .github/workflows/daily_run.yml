@@ -1,28 +1,41 @@
-name: Pakistani Hulk Bot ElevenLabs
+name: Generate Hulk Video
+
 on:
+  push:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
+    - name: Checkout Code
+      uses: actions/checkout@v3
 
-      - name: Install All Tools
-        run: |
-          sudo apt-get update && sudo apt-get install -y ffmpeg
-          pip install requests moviepy==1.0.3 Pillow imageio[pyav] imageio-ffmpeg
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
 
-      - name: Run Bot
-        env:
-          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
-        run: python main.py
+    - name: Install System Dependencies (ffmpeg)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
 
-      - name: Upload Result
-        uses: actions/upload-artifact@v4
-        with:
-          name: Hulk-Pakistani-Video
-          path: hulk_bot_final.mp4
+    - name: Install Python Dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Script
+      env:
+        ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+      run: |
+        python main.py
+
+    - name: Upload Video Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: hulk-video
+        path: hulk_bot_final.mp4
