@@ -6,32 +6,36 @@ import google.generativeai as genai
 from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
 
 # --- SETUP ---
-# GitHub Secrets se API Key uthane ke liye
+# GitHub Secrets se API Key uthayega
 GEMINI_KEY = os.getenv("GEMINI_API_KEY") 
 genai.configure(api_key=GEMINI_KEY)
 model = genai.GenerativeModel('gemini-pro')
 
-# 1. AI SCRIPT GENERATION (90 Seconds)
+# 1. AI SCRIPT GENERATION (Unique & 90 Seconds)
 def get_ai_content():
     prompt = """Write a funny Hindi story for a 90-second video about Hulk and his Indian Mom. 
-    The story should be very long (350+ words) to cover 90 seconds.
-    Format the output exactly like this:
-    STORY: [The Hindi story]
+    The story must be at least 350 words long.
+    Format your response EXACTLY like this:
+    STORY: [The Hindi story text here]
     SCENES: [12 English image prompts separated by commas]"""
     
     response = model.generate_content(prompt)
     text = response.text
     
-    story = text.split("STORY:")[1].split("SCENES:")[0].strip()
-    prompts = text.split("SCENES:")[1].strip().split(",")
-    return story, prompts
+    try:
+        story = text.split("STORY:")[1].split("SCENES:")[0].strip()
+        prompts = text.split("SCENES:")[1].strip().split(",")
+        return story, prompts
+    except:
+        # Fallback agar AI format sahi na de
+        return "Hulk ko mummy ne mara kyunki wo so raha tha.", ["hulk sleeping cartoon"]
 
-# 2. VOICE GENERATION
+# 2. VOICE GENERATION (Madhur Neural Voice)
 async def generate_audio(text):
     communicate = edge_tts.Communicate(text, "hi-IN-MadhurNeural")
     await communicate.save("voiceover.mp3")
 
-# 3. IMAGE DOWNLOAD
+# 3. IMAGE DOWNLOAD (Pollinations AI - Unlimited Free)
 def download_images(prompts):
     img_list = []
     for i, p in enumerate(prompts[:12]):
@@ -43,7 +47,7 @@ def download_images(prompts):
         img_list.append(name)
     return img_list
 
-# 4. VIDEO ASSEMBLY
+# 4. VIDEO ASSEMBLY (90 Seconds Duration)
 def create_video(images, audio_file):
     audio = AudioFileClip(audio_file)
     duration_per_img = audio.duration / len(images)
@@ -55,6 +59,7 @@ def create_video(images, audio_file):
         
     final = concatenate_videoclips(clips, method="compose")
     final = final.set_audio(audio)
+    # Output file ka naam
     final.write_videofile("hulk_funny_final.mp4", fps=24, codec="libx264")
 
 # EXECUTION
